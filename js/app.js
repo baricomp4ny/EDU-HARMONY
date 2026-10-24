@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const isStaff = user => user.role === 'dosen' || user.role === 'admin';
+const groupMembers = g => Array.isArray(g.memberIds) ? g.memberIds : [];
 
 function emptyHtml(text, icon = 'fa-mug-hot'){
     return `<div class="empty"><i class="fas ${icon}" aria-hidden="true"></i><span>${escapeHtml(text)}</span></div>`;
@@ -73,7 +74,7 @@ function radarSvg(values){
 
 // persentase pengguna sistem yang bertipe sama
 function typeShare(key){
-    const all = Object.values(store.getMap(KEYS.personality)).filter(r => r && hasOwn(CHARACTERS, r.key));
+    const all = getAllPersonalities();
     return all.length ? Math.round(all.filter(r => r.key === key).length / all.length * 100) : 0;
 }
 
@@ -184,7 +185,7 @@ function initRegister(){
         if(idExists(id)) return showFormMsg(msg, `${ID_LABEL[role]} sudah terdaftar.`);
 
         const users = store.getMap(KEYS.users);
-        users[id] = { id, role, name, password: await hashPassword(pw), created: Date.now() };
+        users[id] = { role, name, passwordHash: await hashPassword(pw), createdAt: Date.now() };
         if(!store.set(KEYS.users, users)) return;
         form.querySelector('button[type=submit]').disabled = true;
         showFormMsg(msg, 'Akun berhasil dibuat. Mengalihkan ke halaman login…', true);
@@ -194,11 +195,11 @@ function initRegister(){
 
 /* ---------- dashboard ---------- */
 function initDashboard(user){
-    const tasks = store.getList(KEYS.tasks).filter(t => t.owner === user.id);
+    const tasks = store.getList(KEYS.tasks).filter(t => t.ownerId === user.id);
     const posts = store.getList(KEYS.forum);
     const groups = store.getList(KEYS.groups);
     const mentors = store.getList(KEYS.mentors);
-    const personalities = store.getMap(KEYS.personality);
+    const personalities = getAllPersonalities();
     const p = getPersonality(user.id);
 
     document.getElementById('heroTitle').textContent = `Halo, ${user.name.split(' ')[0]}!`;
@@ -209,10 +210,10 @@ function initDashboard(user){
     const stats = user.role === 'mahasiswa' ? [
         { n: tasks.filter(t => !t.done).length, label: 'Tugas Aktif', icon: 'fa-list-check' },
         { n: tasks.filter(t => t.done).length, label: 'Tugas Selesai', icon: 'fa-circle-check' },
-        { n: groups.filter(g => Array.isArray(g.members) && g.members.includes(user.id)).length, label: 'Kelompok Diikuti', icon: 'fa-users' },
+        { n: groups.filter(g => groupMembers(g).includes(user.id)).length, label: 'Kelompok Diikuti', icon: 'fa-users' },
         { n: posts.filter(x => x.authorId === user.id).length, label: 'Postingan Forum', icon: 'fa-comments' }
     ] : [
-        { n: Object.values(personalities).filter(r => r && hasOwn(CHARACTERS, r.key)).length, label: 'Mahasiswa Sudah Tes', icon: 'fa-puzzle-piece' },
+        { n: personalities.length, label: 'Mahasiswa Sudah Tes', icon: 'fa-puzzle-piece' },
         { n: groups.length, label: 'Kelompok', icon: 'fa-users' },
         { n: posts.length, label: 'Diskusi Forum', icon: 'fa-comments' },
         { n: mentors.length, label: 'Sesi Mentoring', icon: 'fa-hand-holding-heart' }
@@ -226,9 +227,9 @@ function initDashboard(user){
         return `<div class="list-item"><i class="fas fa-file-pen" aria-hidden="true"></i><div class="grow"><strong>${escapeHtml(t.title)}</strong></div><span class="tag ${due.cls}">${escapeHtml(due.text)}</span></div>`;
     }).join('') : emptyHtml('Belum ada tugas aktif.');
 
-    const latest = posts.slice().sort((a, b) => (b.created || 0) - (a.created || 0)).slice(0, 4);
+    const latest = posts.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 4);
     document.getElementById('latestPosts').innerHTML = latest.length ? latest.map(x => `
-        <div class="list-item"><i class="fas ${(FORUM_TYPES[x.type] || FORUM_TYPES.deep).icon}" aria-hidden="true"></i><div class="grow"><strong>${escapeHtml(x.title)}</strong><div class="muted">${characterBadgeHtml(x.authorId)} ${escapeHtml(x.author)}</div></div></div>`).join('') : emptyHtml('Belum ada diskusi.');
+        <div class="list-item"><i class="fas ${(FORUM_TYPES[x.type] || FORUM_TYPES.deep).icon}" aria-hidden="true"></i><div class="grow"><strong>${escapeHtml(x.title)}</strong><div class="muted">${characterBadgeHtml(x.authorId)} ${escapeHtml(getUserName(x.authorId))}</div></div></div>`).join('') : emptyHtml('Belum ada diskusi.');
 
     // panel kanan: karakter untuk mahasiswa, galeri karakter untuk dosen/admin
     const side = document.getElementById('sidePanel');
@@ -252,7 +253,7 @@ function initDashboard(user){
         const card = document.getElementById('distributionCard');
         card.hidden = false;
         const counts = {};
-        Object.values(personalities).forEach(r => { if(r && hasOwn(CHARACTERS, r.key)) counts[r.key] = (counts[r.key] || 0) + 1; });
+        personalities.forEach(r => { counts[r.key] = (counts[r.key] || 0) + 1; });
         const total = Object.values(counts).reduce((a, b) => a + b, 0);
         document.getElementById('distribution').innerHTML = Object.values(CHARACTERS).map(c => {
             const pct = total ? (counts[c.key] || 0) / total * 100 : 0;
@@ -367,10 +368,10 @@ function initTest(user){
                 firstMissing.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-            const { key, second, scores } = classifyAnswers(answers);
+            const key = classifyAnswers(answers).key;
             const prev = getPersonality(user.id);
-            const result = { key, second, scores, answers, mode: prev && prev.key === key ? prev.mode : CHARACTERS[key].mode, takenAt: Date.now() };
-            if(savePersonality(user.id, result)){
+            const mode = prev && prev.key === key ? prev.mode : CHARACTERS[key].mode;
+            if(savePersonality(user.id, { answers, mode, takenAt: Date.now() })){
                 showResult();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
@@ -387,7 +388,7 @@ function initProfile(user){
     const render = () => {
         const p = getPersonality(user.id);
         const users = store.getMap(KEYS.users);
-        const joined = hasOwn(users, user.id) && users[user.id].created ? formatDateTime(users[user.id].created) : 'Akun demo';
+        const joined = hasOwn(users, user.id) && users[user.id].createdAt ? formatDateTime(users[user.id].createdAt) : 'Akun demo';
         root.innerHTML = `
         <section class="card profile-card">
             <div class="avatar avatar-xl" aria-hidden="true">${escapeHtml(initials(user.name))}</div>
@@ -413,7 +414,7 @@ function initTasks(user){
     const msg = document.getElementById('taskMsg');
 
     const render = () => {
-        const arr = store.getList(KEYS.tasks).filter(t => t.owner === user.id)
+        const arr = store.getList(KEYS.tasks).filter(t => t.ownerId === user.id)
             .sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || sortByDue(a, b));
         list.innerHTML = arr.length ? arr.map(t => {
             const due = dueInfo(t);
@@ -436,7 +437,7 @@ function initTasks(user){
         if(due && !parseLocalDate(due)) return showFormMsg(msg, 'Format tanggal tidak valid.');
         msg.hidden = true;
         const arr = store.getList(KEYS.tasks);
-        arr.push({ id: uid('T'), title, due, owner: user.id, done: false, created: Date.now() });
+        arr.push({ id: uid(), ownerId: user.id, title, due, done: false, createdAt: Date.now() });
         if(store.set(KEYS.tasks, arr)){ form.reset(); render(); toast('Tugas ditambahkan.', 'ok'); }
     });
 
@@ -444,13 +445,13 @@ function initTasks(user){
         const id = e.target.dataset.toggle;
         if(!id) return;
         const arr = store.getList(KEYS.tasks);
-        const t = arr.find(x => x.id === id && x.owner === user.id);
+        const t = arr.find(x => x.id === id && x.ownerId === user.id);
         if(t){ t.done = e.target.checked; store.set(KEYS.tasks, arr); render(); }
     });
     list.addEventListener('click', e => {
         const id = e.target.closest('[data-delete]')?.dataset.delete;
         if(!id || !confirm('Hapus tugas ini?')) return;
-        store.set(KEYS.tasks, store.getList(KEYS.tasks).filter(x => !(x.id === id && x.owner === user.id)));
+        store.set(KEYS.tasks, store.getList(KEYS.tasks).filter(x => !(x.id === id && x.ownerId === user.id)));
         render();
     });
     render();
@@ -482,17 +483,18 @@ function initForum(user){
     const render = () => {
         const arr = store.getList(KEYS.forum)
             .filter(x => filter === 'all' || x.type === filter)
-            .sort((a, b) => (b.created || 0) - (a.created || 0));
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         area.innerHTML = arr.length ? arr.map(x => {
             const type = FORUM_TYPES[x.type];
+            const author = getUserName(x.authorId);
             const canDelete = x.authorId === user.id || isStaff(user);
             return `
             <article class="post ${type ? 'post-' + type.key : ''}">
                 <header>
-                    <div class="avatar avatar-sm" aria-hidden="true">${escapeHtml(initials(x.author))}</div>
+                    <div class="avatar avatar-sm" aria-hidden="true">${escapeHtml(initials(author))}</div>
                     <div class="grow">
-                        <strong>${escapeHtml(x.author)}</strong> ${characterBadgeHtml(x.authorId)}
-                        <div class="muted">${escapeHtml(formatDateTime(x.created))}</div>
+                        <strong>${escapeHtml(author)}</strong> ${characterBadgeHtml(x.authorId)}
+                        <div class="muted">${escapeHtml(formatDateTime(x.createdAt))}</div>
                     </div>
                     <span class="tag">${type ? `<i class="fas ${type.icon}" aria-hidden="true"></i> ${type.name}` : 'Umum'}</span>
                     ${canDelete ? `<button type="button" class="icon-btn" data-delete="${escapeHtml(x.id)}" aria-label="Hapus postingan"><i class="fas fa-trash"></i></button>` : ''}
@@ -519,7 +521,7 @@ function initForum(user){
         if(text.length > FORUM_TYPES[type].maxBody) return showFormMsg(msg, `Isi ${FORUM_TYPES[type].name} maksimal ${FORUM_TYPES[type].maxBody} karakter.`);
         msg.hidden = true;
         const arr = store.getList(KEYS.forum);
-        arr.push({ id: uid('P'), title, body: text, type, author: user.name, authorId: user.id, created: Date.now() });
+        arr.push({ id: uid(), authorId: user.id, type, title, body: text, createdAt: Date.now() });
         if(store.set(KEYS.forum, arr)){
             const keepType = typeSel.value;
             form.reset();
@@ -551,7 +553,7 @@ function initGroups(user){
     const render = () => {
         const arr = store.getList(KEYS.groups);
         list.innerHTML = arr.length ? arr.map(g => {
-            const members = Array.isArray(g.members) ? g.members : [];
+            const members = groupMembers(g);
             const isMember = members.includes(user.id);
             const full = members.length >= g.size;
             const canDelete = g.creatorId === user.id || isStaff(user);
@@ -567,7 +569,7 @@ function initGroups(user){
                     <h4>${escapeHtml(g.name)}</h4>
                     ${canDelete ? `<button type="button" class="icon-btn" data-delete="${escapeHtml(g.id)}" aria-label="Hapus kelompok"><i class="fas fa-trash"></i></button>` : ''}
                 </header>
-                <div class="muted">Pembuat: ${escapeHtml(g.creator)}</div>
+                <div class="muted">Pembuat: ${escapeHtml(getUserName(g.creatorId))}</div>
                 <div class="progress" title="${members.length} dari ${g.size} anggota"><span style="width:${Math.min(100, members.length / g.size * 100)}%"></span></div>
                 <div class="muted">${members.length} / ${escapeHtml(g.size)} anggota ${compText ? '• komposisi ' + escapeHtml(compText) : ''}</div>
                 <div class="member-list">${members.map(id => `<span class="member" title="${escapeHtml(getUserName(id))}">${escapeHtml(initials(getUserName(id)))}${characterBadgeHtml(id)}</span>`).join('')}</div>
@@ -586,7 +588,7 @@ function initGroups(user){
         const arr = store.getList(KEYS.groups);
         if(arr.some(g => String(g.name).toLowerCase() === name.toLowerCase())) return showFormMsg(msg, 'Nama kelompok sudah dipakai.');
         msg.hidden = true;
-        arr.push({ id: uid('G'), name, size, creator: user.name, creatorId: user.id, members: user.role === 'mahasiswa' ? [user.id] : [] });
+        arr.push({ id: uid(), creatorId: user.id, name, size, memberIds: user.role === 'mahasiswa' ? [user.id] : [] });
         if(store.set(KEYS.groups, arr)){ form.reset(); render(); toast('Kelompok dibuat.', 'ok'); }
     });
 
@@ -596,13 +598,13 @@ function initGroups(user){
         const arr = store.getList(KEYS.groups);
         const g = arr.find(x => x.id === (btn.dataset.join || btn.dataset.leave || btn.dataset.delete));
         if(!g) return render();
-        g.members = Array.isArray(g.members) ? g.members : [];
+        g.memberIds = groupMembers(g);
         if(btn.dataset.join && user.role === 'mahasiswa'){
-            if(g.members.includes(user.id)) return;
-            if(g.members.length >= g.size) return toast('Kelompok sudah penuh.', 'error');
-            g.members.push(user.id);
+            if(g.memberIds.includes(user.id)) return;
+            if(g.memberIds.length >= g.size) return toast('Kelompok sudah penuh.', 'error');
+            g.memberIds.push(user.id);
         } else if(btn.dataset.leave){
-            g.members = g.members.filter(id => id !== user.id);
+            g.memberIds = g.memberIds.filter(id => id !== user.id);
         } else if(btn.dataset.delete){
             if(!(g.creatorId === user.id || isStaff(user)) || !confirm(`Hapus kelompok "${g.name}"?`)) return;
             arr.splice(arr.indexOf(g), 1);
@@ -629,7 +631,7 @@ function initMentoring(user){
         list.innerHTML = arr.length ? arr.map(m => `
             <div class="list-item">
                 <div class="avatar avatar-sm" aria-hidden="true">${escapeHtml(initials(m.name))}</div>
-                <div class="grow"><strong>${escapeHtml(m.name)}</strong><div class="muted">${escapeHtml(m.topic)} • ditambahkan oleh ${escapeHtml(m.addedBy)}</div></div>
+                <div class="grow"><strong>${escapeHtml(m.name)}</strong><div class="muted">${escapeHtml(m.topic)} • ditambahkan oleh ${escapeHtml(getUserName(m.addedById))}</div></div>
                 ${isStaff(user) ? `<button type="button" class="icon-btn" data-delete="${escapeHtml(m.id)}" aria-label="Hapus mentor"><i class="fas fa-trash"></i></button>` : ''}
             </div>`).join('') : emptyHtml('Belum ada mentor.');
     };
@@ -643,7 +645,7 @@ function initMentoring(user){
         if(name.length > 60 || topic.length > 100) return showFormMsg(msg, 'Nama maks. 60 dan topik maks. 100 karakter.');
         msg.hidden = true;
         const arr = store.getList(KEYS.mentors);
-        arr.push({ id: uid('M'), name, topic, addedBy: user.name, created: Date.now() });
+        arr.push({ id: uid(), addedById: user.id, name, topic, createdAt: Date.now() });
         if(store.set(KEYS.mentors, arr)){ form.reset(); render(); toast('Mentor ditambahkan.', 'ok'); }
     });
 

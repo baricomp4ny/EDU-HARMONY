@@ -1,12 +1,22 @@
 /* common.js - penyimpanan, autentikasi, layout (sidebar) & helper karakter (dipakai semua halaman) */
 
+/*
+ * Skema data (localStorage). Setiap fakta disimpan sekali; nama orang & hasil tipe dihitung saat ditampilkan.
+ *   users        { [nim/nip]: { role, name, passwordHash, createdAt } }
+ *   personality  { [userId]: { answers: [typeKey x10], mode, takenAt } }
+ *   tasks        [ { id, ownerId, title, due, done, createdAt } ]
+ *   forum        [ { id, authorId, type, title, body, createdAt } ]
+ *   groups       [ { id, creatorId, name, size, memberIds: [userId] } ]
+ *   mentors      [ { id, addedById, name, topic, createdAt } ]
+ * id = UUID acak, bukan nomor urut (auto increment).
+ */
 const KEYS = {
-    users: 'edu_users_vfinal',
-    personality: 'edu_personality_vfinal',
-    tasks: 'edu_tasks_vfinal',
-    forum: 'edu_forum_vfinal',
-    groups: 'edu_groups_vfinal',
-    mentors: 'edu_mentors_vfinal'
+    users: 'edu_users_v2',
+    personality: 'edu_personality_v2',
+    tasks: 'edu_tasks_v2',
+    forum: 'edu_forum_v2',
+    groups: 'edu_groups_v2',
+    mentors: 'edu_mentors_v2'
 };
 
 const ROLE_LABEL = { mahasiswa: 'Mahasiswa', dosen: 'Dosen', admin: 'Admin' };
@@ -46,8 +56,14 @@ function escapeHtml(value){
     return String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 }
 
-function uid(prefix){
-    return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+// UUID v4 acak; tidak berurutan dan tidak bisa ditebak dari waktu pembuatan
+function uid(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 function initials(name){
@@ -66,10 +82,8 @@ async function hashPassword(pw){
     return 'djb2:' + h.toString(16);
 }
 
-async function verifyPassword(pw, stored){
-    if(typeof stored !== 'string') return false;
-    if(!/^(sha256|djb2):/.test(stored)) return pw === stored; // akun lama (sebelum hashing)
-    return (await hashPassword(pw)) === stored;
+async function verifyPassword(pw, hash){
+    return typeof hash === 'string' && (await hashPassword(pw)) === hash;
 }
 
 function findDemoAccount(role, id){
@@ -99,16 +113,7 @@ async function authenticate(role, id, password){
     const demo = findDemoAccount(role, id);
     if(demo) return demo.password === password ? { role, id: demo.id, name: demo.name } : null;
     const reg = findRegisteredAccount(role, id);
-    if(reg && await verifyPassword(password, reg.password)){
-        if(!/^(sha256|djb2):/.test(reg.password)){
-            // upgrade password lama yang tersimpan polos
-            const users = store.getMap(KEYS.users);
-            users[id].password = await hashPassword(password);
-            store.set(KEYS.users, users);
-        }
-        return { role, id: reg.id, name: reg.name };
-    }
-    return null;
+    return reg && await verifyPassword(password, reg.passwordHash) ? { role, id, name: reg.name } : null;
 }
 
 function getCurrentUser(){
@@ -128,15 +133,27 @@ function logout(){
 }
 
 /* ---------- kepribadian / karakter ---------- */
-function getPersonality(userId){
-    const all = store.getMap(KEYS.personality);
-    const res = hasOwn(all, userId) ? all[userId] : null;
-    return res && hasOwn(CHARACTERS, res.key) ? res : null;
+// yang disimpan hanya jawaban + mode; tipe, sisi kedua & skor selalu dihitung ulang dari jawaban
+function derivePersonality(rec){
+    const valid = rec && Array.isArray(rec.answers) && rec.answers.length === TEST_QUESTIONS.length
+        && rec.answers.every(k => hasOwn(CHARACTERS, k));
+    if(!valid) return null;
+    const res = classifyAnswers(rec.answers);
+    return { ...res, answers: rec.answers, mode: hasOwn(LEARNING_MODES, rec.mode) ? rec.mode : CHARACTERS[res.key].mode, takenAt: rec.takenAt };
 }
 
-function savePersonality(userId, result){
+function getPersonality(userId){
     const all = store.getMap(KEYS.personality);
-    all[userId] = result;
+    return hasOwn(all, userId) ? derivePersonality(all[userId]) : null;
+}
+
+function getAllPersonalities(){
+    return Object.values(store.getMap(KEYS.personality)).map(derivePersonality).filter(Boolean);
+}
+
+function savePersonality(userId, { answers, mode, takenAt }){
+    const all = store.getMap(KEYS.personality);
+    all[userId] = { answers, mode, takenAt };
     return store.set(KEYS.personality, all);
 }
 

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard • EDU-HARMONY</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Roboto+Slab:wght@700;800&family=Silkscreen:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+<script defer src="js/data.js"></script>
+<script defer src="js/common.js"></script>
+<script defer src="js/app.js"></script>
+</head>
+<body data-page="dashboard" data-auth="required">
+
+<div class="app has-rightbar">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <div>
+        <h1>Dashboard</h1>
+        <p class="muted">Ringkasan aktivitas belajarmu</p>
+      </div>
+      <div id="userWelcome" class="user-badge"></div>
+    </header>
+
+    <section class="hero">
+      <h2 id="heroTitle">Halo!</h2>
+      <p id="heroText"></p>
+      <div class="chips">
+        <a href="tasks.html" class="chip"><span class="chip-icon" style="background:var(--yellow)"><i class="fas fa-list-check"></i></span>Tugas</a>
+        <a href="groups.html" class="chip"><span class="chip-icon" style="background:var(--blue)"><i class="fas fa-users"></i></span>Kelompok</a>
+        <a href="forum.html" class="chip"><span class="chip-icon" style="background:var(--pink)"><i class="fas fa-comments"></i></span>Forum</a>
+        <a href="mentoring.html" class="chip"><span class="chip-icon" style="background:var(--teal)"><i class="fas fa-hand-holding-heart"></i></span>Mentoring</a>
+      </div>
+    </section>
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="grid-2">
+      <section class="card">
+        <div class="section-title"><h3>Tugas Terdekat</h3><a href="tasks.html">Lihat semua</a></div>
+        <div id="upcomingTasks"></div>
+      </section>
+      <section class="card">
+        <div class="section-title"><h3>Diskusi Terbaru</h3><a href="forum.html">Lihat semua</a></div>
+        <div id="latestPosts"></div>
+      </section>
+    </div>
+    <section class="card" id="distributionCard" hidden>
+      <h3>Distribusi Kepribadian Kelas</h3>
+      <div id="distribution"></div>
+    </section>
+  </main>
+  <aside class="rightbar" id="sidePanel" aria-label="Karakter"></aside>
+</div>
+
+</body>
+</html>

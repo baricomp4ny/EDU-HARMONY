@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forum Diskusi • EDU-HARMONY</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Roboto+Slab:wght@700;800&family=Silkscreen:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+<script defer src="js/data.js"></script>
+<script defer src="js/common.js"></script>
+<script defer src="js/app.js"></script>
+</head>
+<body data-page="forum" data-auth="required">
+
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <div>
+        <h1>Forum Diskusi</h1>
+        <p class="muted">Quick Chat untuk ide cepat, Deep Discussion untuk pembahasan mendalam</p>
+      </div>
+      <div id="userWelcome" class="user-badge"></div>
+    </header>
+
+    <section class="card">
+      <h3>Buat Diskusi</h3>
+      <form id="createPostForm" novalidate>
+        <div class="form-row">
+          <div class="field grow">
+            <label for="postTitle">Judul</label>
+            <input id="postTitle" maxlength="120" placeholder="Apa yang ingin dibahas?" required>
+          </div>
+          <div class="field">
+            <label for="postType">Kategori</label>
+            <select id="postType">
+              <option value="quick">Quick Chat (singkat)</option>
+              <option value="deep">Deep Discussion (mendalam)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="postBody">Isi <span class="muted" id="bodyCounter"></span></label>
+          <textarea id="postBody" rows="4" placeholder="Tulis pendapat atau pertanyaanmu…" required></textarea>
+        </div>
+        <div id="postMsg" class="form-msg" hidden></div>
+        <button class="btn" type="submit"><i class="fas fa-paper-plane"></i> Posting</button>
+      </form>
+    </section>
+    <div class="filter-bar" role="group" aria-label="Filter kategori">
+      <button type="button" class="chip active" data-filter="all" aria-pressed="true">Semua</button>
+      <button type="button" class="chip" data-filter="quick" aria-pressed="false"><i class="fas fa-bolt"></i> Quick Chat</button>
+      <button type="button" class="chip" data-filter="deep" aria-pressed="false"><i class="fas fa-feather"></i> Deep Discussion</button>
+    </div>
+    <div id="postsArea"></div>
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Daftar • EDU-HARMONY</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Roboto+Slab:wght@700;800&family=Silkscreen:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+<script defer src="js/data.js"></script>
+<script defer src="js/common.js"></script>
+<script defer src="js/app.js"></script>
+</head>
+<body data-page="register" class="auth-page">
+
+<main class="auth-wrap">
+  <div class="auth-frame auth-single">
+    <section class="auth-form">
+      <a href="index.html" class="brand">Edu-Harmony<span>.</span></a>
+      <h1>Buat Akun Baru</h1>
+      <form id="registerForm" novalidate>
+        <div class="field">
+          <label for="regRole">Peran</label>
+          <select id="regRole">
+            <option value="mahasiswa">Mahasiswa</option>
+            <option value="dosen">Dosen</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="regName">Nama lengkap</label>
+          <input id="regName" maxlength="60" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="regId" id="regIdLabel">NIM</label>
+          <input id="regId" inputmode="numeric" maxlength="12" autocomplete="username" required>
+        </div>
+        <div class="form-row">
+          <div class="field grow">
+            <label for="regPassword">Password</label>
+            <input id="regPassword" type="password" minlength="6" autocomplete="new-password" required>
+          </div>
+          <div class="field grow">
+            <label for="regPassword2">Ulangi password</label>
+            <input id="regPassword2" type="password" minlength="6" autocomplete="new-password" required>
+          </div>
+        </div>
+        <div id="registerMsg" class="form-msg" role="alert" hidden></div>
+        <button class="btn btn-block" type="submit">Daftar</button>
+      </form>
+      <p class="muted">Sudah punya akun? <a href="index.html">Masuk</a></p>
+    </section>
+  </div>
+</main>
+
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mentoring • EDU-HARMONY</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Roboto+Slab:wght@700;800&family=Silkscreen:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="css/style.css">
+<script defer src="js/data.js"></script>
+<script defer src="js/common.js"></script>
+<script defer src="js/app.js"></script>
+</head>
+<body data-page="mentoring" data-auth="required">
+
+<div class="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <header class="topbar">
+      <div>
+        <h1>Mentoring</h1>
+        <p class="muted">Sesi bimbingan dari dosen dan mentor</p>
+      </div>
+      <div id="userWelcome" class="user-badge"></div>
+    </header>
+
+    <section class="card" id="mentorFormCard">
+      <h3>Tambah Mentor</h3>
+      <form id="createMentorForm" class="form-row" novalidate>
+        <div class="field grow">
+          <label for="mentorName">Nama mentor</label>
+          <input id="mentorName" maxlength="60" required>
+        </div>
+        <div class="field grow">
+          <label for="mentorTopic">Topik</label>
+          <input id="mentorTopic" maxlength="100" required>
+        </div>
+        <button class="btn" type="submit"><i class="fas fa-plus"></i> Tambah</button>
+      </form>
+      <div id="mentorMsg" class="form-msg" hidden></div>
+    </section>
+    <section class="card">
+      <h3>Daftar Mentor</h3>
+      <div id="mentorsList"></div>
+    </section>
+  </main>
+</div>
+
+</body>
+</html>
